@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess Clock</title>
+<style>
+/* ===== 화면 실제 높이 기반 ===== */
+:root{ --vh:1vh; }
+
+body{
+    touch-action: manipulation;
+    margin:0;
+    background:#111;
+    font-family:sans-serif;
+    user-select:none;
+    overflow:hidden;
+    min-height:calc(var(--vh)*100);
+}
+
+/* ===== 타이머 영역 ===== */
+.half{
+    height:calc(var(--vh)*50);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    box-sizing:border-box;
+}
+
+.white{ background:#f5f5f5; color:#000; }
+.black{ background:#222; color:#fff; }
+
+.active{ border:14px solid #00ff00; }
+.danger{ color:#ff2b2b !important; }
+
+/* ===== 종료 깜빡임 ===== */
+#flash{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:rgba(255,0,0,0.35);
+    opacity:0;
+}
+.flash #flash{ animation:blink 1s steps(1,end) infinite; }
+
+@keyframes blink{
+    0%{opacity:0;}
+    49%{opacity:0;}
+    50%{opacity:1;}
+    100%{opacity:1;}
+}
+@keyframes activeBlink{
+    0%{ border-color:#00ff00; }
+    50%{ border-color:transparent; }
+    100%{ border-color:#00ff00; }
+}
+
+.paused-active{
+    animation:activeBlink 1.5s infinite;
+}
+
+/* ===== 시작 설정 ===== */
+.controls{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#000d;
+    color:white;
+    border-radius:16px;
+    text-align:center;
+    z-index:5;
+}
+
+/* ===== 버튼바 (기본 숨김) ===== */
+.bar{
+    display:none;
+    z-index:4;
+}
+
+/* ===== PC ===== */
+@media (min-width:769px){
+
+    .half{ font-size:120px; }
+
+    .controls{
+        width:420px;
+        padding:25px;
+        font-size:18px;
+    }
+
+    input{
+        width:160px;
+        height:42px;
+        font-size:16px;
+        margin:6px;
+        text-align:center;
+    }
+
+    button{
+        font-size:16px;
+        padding:8px 16px;
+        margin:6px;
+        cursor:pointer;
+    }
+
+    .bar{
+        position:fixed;
+        bottom:20px;
+        left:50%;
+        transform:translateX(-50%);
+    }
+    .controls button{
+        width:50%;
+        height:50px;
+        font-size:22px;
+        border-radius:14px;
+        border:none;
+        margin-top:14px;
+        background:#6DCC66;
+        color:#000;
+        font-weight:bold;
+    }
+}
+
+/* ===== 모바일 ===== */
+@media (max-width:768px){
+
+    .half{ font-size:12vw; }
+    .active{ border:10px solid #00ff00; }
+
+    .controls{
+        width:92vw;
+        padding:22px 15px;
+        font-size:20px;
+    }
+
+    input{
+        width:100%;
+        height:64px;
+        font-size:20px;
+        margin:10px 0;
+        border-radius:14px;
+        border:none;
+        text-align:center;
+    }
+
+    /* 흑백 경계선 중앙 기준 */
+    .bar{
+        position:fixed;
+        top:calc(var(--vh)*50);
+        left:50%;
+        transform:translate(-50%,-50%);
+        width:80vw;
+        justify-content:space-between;
+        background:rgba(0,0,0,0.6);
+        padding:10px;
+        border-radius:16px;
+    }
+
+    .bar button{
+        width:26vw;
+        height:26vw;
+        max-width:110px;
+        max-height:110px;
+        border-radius:18px;
+        font-size:15px;
+    }
+    .controls button{
+        width:100%;
+        height:70px;
+        font-size:22px;
+        border-radius:14px;
+        border:none;
+        margin-top:14px;
+        background:#6DCC66;
+        color:#000;
+        font-weight:bold;
+    }
+}
+</style>
+
+</head>
+
+<body>
+
+<div id="flash"></div>
+
+<div id="black" class="half black">5:00.000</div>
+<div id="white" class="half white">5:00.000</div>
+
+<div class="controls" id="setup">
+White seconds<br>
+<input id="wsec" inputmode="numeric" value="600"><br>
+Black seconds<br>
+<input id="bsec" inputmode="numeric" value="600"><br>
+Increment (sec)<br>
+<input id="inc" inputmode="numeric" value="0"><br>
+<button onclick="startClock()">Start</button>
+</div>
+
+<div class="bar" id="bar">
+<button onclick="pauseClock()">Pause</button>
+<button onclick="resumeClock()">Resume</button>
+<button onclick="resetClock()">Reset</button>
+</div>
+
+<script>
+/* ===== 실제 화면 높이 ===== */
+function setRealHeight(){
+    document.documentElement.style.setProperty('--vh', window.innerHeight*0.01+'px')
+}
+setRealHeight()
+window.addEventListener('resize',setRealHeight)
+
+/* ===== 시계 로직 ===== */
+let w=600,b=600,increment=0
+let turn=null,last=0,running=false,paused=true,over=false
+
+const W=white,B=black,body=document.body,barEl=document.getElementById("bar")
+
+function now(){return performance.now()/1000}
+
+function fmt(t){
+    t=Math.max(0,t)
+    let m=Math.floor(t/60)
+    let s=Math.floor(t%60)
+    let ms=Math.floor((t%1)*1000)
+    return m+":"+String(s).padStart(2,'0')+"."+String(ms).padStart(3,'0')
+}
+
+function loop(){
+    if(running&&!paused&&!over&&turn){
+        let dt=now()-last
+        if(turn==='w')w-=dt;
+        else b-=dt
+        last=now()
+        if(w<=0||b<=0){over=true;running=false;body.classList.add("flash")}
+    }
+    render()
+    requestAnimationFrame(loop)
+}
+loop()
+
+function render(){
+    W.textContent=fmt(w)
+    B.textContent=fmt(b)
+    W.classList.remove("active","paused-active")
+    B.classList.remove("active","paused-active")
+    if(running && turn==='w'){
+        if(paused){
+            W.classList.add("active","paused-active")
+        }else{
+            W.classList.add("active")
+        }
+    }
+    if(running && turn==='b'){
+        if(paused){
+            B.classList.add("active","paused-active")
+        }else{
+            B.classList.add("active")
+        }
+    }
+    W.classList.toggle("danger",w<=10)
+    B.classList.toggle("danger",b<=10)
+}
+
+async function startClock(){
+    await requestWakeLock();
+    w=parseFloat(wsec.value)||0
+    b=parseFloat(bsec.value)||0
+    increment=parseFloat(inc.value)||0
+    running=true;paused=false;over=false
+    body.classList.remove("flash")
+    turn='w'; last=now()
+    setup.style.display="none"
+    barEl.style.display="flex"
+}
+
+function press(s){
+    if(!running||paused||over||turn!==s) return
+    if(s==='w'){w+=increment;turn='b'}
+    else{b+=increment;turn='w'}
+    last=now()
+}
+
+function pauseClock(){
+    if(!running||paused||over)return
+    let dt=now()-last
+    if(turn==='w')w-=dt; else b-=dt
+    paused=true
+}
+
+function resumeClock(){ if(running&&paused&&!over){last=now();paused=false} }
+
+function resetClock(){
+    running=false;paused=true;over=false
+    body.classList.remove("flash")
+    setup.style.display="block"
+    barEl.style.display="none"
+}
+
+W.onpointerdown = ()=>press('w')
+B.onpointerdown = ()=>press('b')
+document.onkeydown=e=>{
+    if(e.code==='Space')press(turn)
+    if(e.key==='p'||e.key==='P')pauseClock()
+    if(e.key==='r'||e.key==='R')resumeClock()
+}
+let wakeLock = null;
+
+async function requestWakeLock(){
+    try{
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Wake Lock 활성화');
+
+        wakeLock.addEventListener('release', () => {
+            console.log('Wake Lock 해제됨');
+        });
+
+    }catch(err){
+        console.log('Wake Lock 실패:', err);
+    }
+}
+
+// 화면 다시 켜졌을 때 다시 요청
+document.addEventListener('visibilitychange', async () => {
+    if(wakeLock !== null && document.visibilityState === 'visible'){
+        await requestWakeLock();
+    }
+});
+</script>
+</body>
+</html>
