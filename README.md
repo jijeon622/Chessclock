@@ -1,3 +1,3 @@
 # Chessclock
-Just a chessclock
+Just a chessclock. 
 Press space or click to skip a turn
