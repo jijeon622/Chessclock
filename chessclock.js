@@ -28,7 +28,11 @@ function loop(){
         if(turn==='w')w-=dt;
         else b-=dt
         last=now()
-        if(w<=0||b<=0){over=true;running=false;body.classList.add("flash")}
+        if (w <= 0 || b <= 0) {
+            over = true
+            running = false
+            document.body.classList.add("flash")
+        }
     }
     render()
     requestAnimationFrame(loop)
@@ -105,8 +109,8 @@ function resumeClock(){
 }
 
 function resetClock(){
+    document.body.classList.remove("flash")
     running=false;paused=true;over=false
-    body.classList.remove("flash")
     setup.style.display="block"
     barEl.style.display="none"
     controlBtn.textContent = "Pause"
