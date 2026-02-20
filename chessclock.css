@@ -1,0 +1,181 @@
+:root{ --vh:1vh; }
+
+body{
+    touch-action: manipulation;
+    margin:0;
+    background:#111;
+    font-family:sans-serif;
+    user-select:none;
+    overflow:hidden;
+    min-height:calc(var(--vh)*100);
+}
+
+/* ===== 타이머 영역 ===== */
+.half{
+    height:calc(var(--vh)*50);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    box-sizing:border-box;
+}
+
+.white{ background:#f5f5f5; color:#000; }
+.black{ background:#222; color:#fff;}
+
+.active{ border:14px solid #00ff00; }
+.danger{ color:#ff2b2b !important; }
+
+/* ===== 종료 깜빡임 ===== */
+#flash{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:rgba(255,0,0,0.35);
+    opacity:0;
+}
+.flash #flash{ animation:blink 1s steps(1,end) infinite; }
+
+@keyframes blink{
+    0%{opacity:0;}
+    49%{opacity:0;}
+    50%{opacity:1;}
+    100%{opacity:1;}
+}
+@keyframes activeBlink{
+    0%{ border-color:#00ff00; }
+    50%{ border-color:transparent; }
+    100%{ border-color:#00ff00; }
+}
+
+.paused-active{
+    animation:activeBlink 1.5s infinite;
+}
+
+/* ===== 시작 설정 ===== */
+.controls{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#000d;
+    color:white;
+    border-radius:16px;
+    text-align:center;
+    z-index:5;
+}
+
+/* ===== 버튼바 (기본 숨김) ===== */
+.bar{
+    display:none;
+    z-index:4;
+}
+
+.ms{
+    font-size:0.5em;
+    position:relative;
+    top:0.4em;
+    letter-spacing:1px;
+}
+
+/* ===== PC ===== */
+@media (min-width:769px){
+
+    .half{ font-size:180px; }
+
+    .controls{
+        width:420px;
+        padding:25px;
+        font-size:18px;
+    }
+
+    input{
+        width:160px;
+        height:42px;
+        font-size:16px;
+        margin:6px;
+        text-align:center;
+    }
+
+    button{
+        font-size:16px;
+        padding:8px 16px;
+        margin:6px;
+        cursor:pointer;
+    }
+
+    .bar{
+        position:fixed;
+        bottom:20px;
+        left:50%;
+        transform:translateX(-50%);
+    }
+    .controls button{
+        width:50%;
+        height:50px;
+        font-size:22px;
+        border-radius:14px;
+        border:none;
+        margin-top:14px;
+        background:#6DCC66;
+        color:#000;
+        font-weight:bold;
+    }
+}
+
+/* ===== 모바일 ===== */
+@media (max-width:768px){
+
+    .half{ font-size:20vw; }
+    .active{ border:10px solid #00ff00; }
+    .black{ transform:rotate(180deg);}
+    .controls{
+        width:92vw;
+        padding:22px 15px;
+        font-size:20px;
+    }
+
+    input{
+        width:100%;
+        height:64px;
+        font-size:20px;
+        margin:10px 0;
+        border-radius:14px;
+        border:none;
+        text-align:center;
+    }
+
+    /* 흑백 경계선 중앙 기준 */
+    .bar{
+        position:fixed;
+        top:calc(var(--vh)*50);
+        left:50%;
+        transform:translate(-50%,-50%);
+        width:60vw;
+        justify-content:center;
+        gap:20px;
+        background:rgba(0,0,0,0.6);
+        padding:8px;
+        border-radius:16px;
+    }
+
+    .bar button{
+        width:26vw;
+        height:20vw;
+        max-width:110px;
+        max-height:110px;
+        border-radius:10px;
+        font-size:15px;
+    }
+    .controls button{
+        width:100%;
+        height:70px;
+        font-size:22px;
+        border-radius:14px;
+        border:none;
+        margin-top:14px;
+        background:#6DCC66;
+        color:#000;
+        font-weight:bold;
+    }
+}
